@@ -36,6 +36,7 @@ unsigned long lastMqttAttemptMs = 0;
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
+  Serial.println("WiFi: connecting...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
@@ -167,19 +168,24 @@ void connectMqtt() {
   if (now - lastMqttAttemptMs < kMqttRetryIntervalMs) return;
   lastMqttAttemptMs = now;
 
+  Serial.println("MQTT: connecting...");
   if (mqttClient.connect(kMqttClientId, MQTT_USERNAME, MQTT_PASSWORD,
                           kAvailabilityTopic, 1, true, "offline")) {
+    Serial.println("MQTT: connected");
     mqttClient.publish(kAvailabilityTopic, "online", true);
     publishDiscovery();
     publishState();
     mqttClient.subscribe(kModeCommandTopic);
     mqttClient.subscribe(kTempCommandTopic);
     mqttClient.subscribe(kFanCommandTopic);
+  } else {
+    Serial.printf("MQTT: connect failed, rc=%d\n", mqttClient.state());
   }
 }
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("production: booting");
   ac.begin();
   connectWiFi();
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
@@ -187,8 +193,15 @@ void setup() {
 }
 
 void loop() {
+  static bool wasConnected = false;
   connectWiFi();
-  if (WiFi.status() == WL_CONNECTED) {
+  bool isConnected = WiFi.status() == WL_CONNECTED;
+  if (isConnected && !wasConnected) {
+    Serial.print("WiFi: connected, IP=");
+    Serial.println(WiFi.localIP());
+  }
+  wasConnected = isConnected;
+  if (isConnected) {
     connectMqtt();
     mqttClient.loop();
   }
