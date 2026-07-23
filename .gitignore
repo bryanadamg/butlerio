@@ -1,3 +1,11 @@
 .pio
 .vscode
 src/production/secrets.h
+
+CLAUDE.md
+.claude/
+
+deploy/mosquitto/config/passwd
+deploy/mosquitto/data/
+deploy/mosquitto/log/
+deploy/homeassistant/
