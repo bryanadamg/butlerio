@@ -34,8 +34,14 @@ String currentFan = "auto";
 
 unsigned long lastMqttAttemptMs = 0;
 
+const unsigned long kWifiRetryIntervalMs = 10000;
+unsigned long lastWifiAttemptMs = 0;
+
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
+  unsigned long now = millis();
+  if (now - lastWifiAttemptMs < kWifiRetryIntervalMs) return;
+  lastWifiAttemptMs = now;
   Serial.println("WiFi: connecting...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
