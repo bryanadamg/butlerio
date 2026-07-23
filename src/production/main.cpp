@@ -89,7 +89,9 @@ void publishDiscovery() {
 
   char buffer[1024];
   size_t n = serializeJson(doc, buffer);
-  mqttClient.publish(kDiscoveryTopic, (uint8_t *)buffer, n, true);
+  if (!mqttClient.publish(kDiscoveryTopic, (uint8_t *)buffer, n, true)) {
+    Serial.printf("MQTT: discovery publish failed (%d bytes)\n", n);
+  }
 }
 
 void publishState() {
@@ -193,6 +195,15 @@ void setup() {
   Serial.begin(115200);
   Serial.println("production: booting");
   ac.begin();
+  mqttClient.setBufferSize(1024);
+
+  Serial.println("WiFi: scanning...");
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) {
+    Serial.printf("  [%d] %s (rssi=%d)\n", i, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+  }
+  WiFi.scanDelete();
+
   connectWiFi();
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
@@ -202,6 +213,14 @@ void loop() {
   static bool wasConnected = false;
   connectWiFi();
   bool isConnected = WiFi.status() == WL_CONNECTED;
+  if (!isConnected) {
+    static wl_status_t lastStatus = (wl_status_t)255;
+    wl_status_t status = WiFi.status();
+    if (status != lastStatus) {
+      Serial.printf("WiFi: status=%d\n", status);
+      lastStatus = status;
+    }
+  }
   if (isConnected && !wasConnected) {
     Serial.print("WiFi: connected, IP=");
     Serial.println(WiFi.localIP());
