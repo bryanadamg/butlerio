@@ -116,13 +116,16 @@ void handleModeCommand(const String &payload) {
     } else if (payload == "auto") {
       mode = kToshibaAcAuto;
     } else {
+      Serial.printf("CMD: mode '%s' unrecognized, ignoring\n", payload.c_str());
       return;  // unknown mode, ignore
     }
     ac.setPower(true);
     ac.setMode(mode);
   }
   currentMode = payload;
+  Serial.printf("IR: sending mode=%s\n", payload.c_str());
   ac.send();
+  Serial.println("IR: send() returned");
   publishState();
 }
 
@@ -132,7 +135,9 @@ void handleTempCommand(const String &payload) {
   if (requested > kToshibaAcMaxTemp) requested = kToshibaAcMaxTemp;
   currentTemp = (uint8_t)requested;
   ac.setTemp(currentTemp);
+  Serial.printf("IR: sending temp=%d\n", currentTemp);
   ac.send();
+  Serial.println("IR: send() returned");
   publishState();
 }
 
@@ -147,11 +152,13 @@ void handleFanCommand(const String &payload) {
   } else if (payload == "high") {
     fan = kToshibaAcFanMax;
   } else {
+    Serial.printf("CMD: fan '%s' unrecognized, ignoring\n", payload.c_str());
     return;  // unknown fan mode, ignore
   }
   currentFan = payload;
-  ac.setFan(fan);
+  Serial.printf("IR: sending fan=%s\n", payload.c_str());
   ac.send();
+  Serial.println("IR: send() returned");
   publishState();
 }
 
@@ -160,6 +167,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
   payloadStr.reserve(length);
   for (unsigned int i = 0; i < length; i++) payloadStr += (char)payload[i];
 
+  Serial.printf("MQTT: rx topic=%s payload=%s\n", topic, payloadStr.c_str());
+
   String topicStr(topic);
   if (topicStr == kModeCommandTopic) {
     handleModeCommand(payloadStr);
@@ -167,6 +176,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
     handleTempCommand(payloadStr);
   } else if (topicStr == kFanCommandTopic) {
     handleFanCommand(payloadStr);
+  } else {
+    Serial.println("MQTT: topic matched no handler");
   }
 }
 
