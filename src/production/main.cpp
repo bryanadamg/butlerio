@@ -95,7 +95,6 @@ void publishDiscovery() {
   doc["swing_mode_state_topic"] = kSwingStateTopic;
 
   JsonArray presetModes = doc["preset_modes"].to<JsonArray>();
-  presetModes.add("none");
   presetModes.add("boost");
   presetModes.add("eco");
   doc["preset_mode_command_topic"] = kPresetCommandTopic;
