@@ -80,9 +80,11 @@ void publishDiscovery() {
 
   JsonArray fanModes = doc["fan_modes"].to<JsonArray>();
   fanModes.add("auto");
-  fanModes.add("low");
-  fanModes.add("medium");
-  fanModes.add("high");
+  fanModes.add("1");
+  fanModes.add("2");
+  fanModes.add("3");
+  fanModes.add("4");
+  fanModes.add("5");
   doc["fan_mode_command_topic"] = kFanCommandTopic;
   doc["fan_mode_state_topic"] = kFanStateTopic;
 
@@ -197,16 +199,14 @@ void handleFanCommand(const String &payload) {
   uint8_t fan;
   if (payload == "auto") {
     fan = kToshibaAcFanAuto;
-  } else if (payload == "low") {
-    fan = kToshibaAcFanMin;
-  } else if (payload == "medium") {
-    fan = kToshibaAcFanMed;
-  } else if (payload == "high") {
-    fan = kToshibaAcFanMax;
+  } else if (payload == "1" || payload == "2" || payload == "3" ||
+             payload == "4" || payload == "5") {
+    fan = payload.toInt();
   } else {
     Serial.printf("CMD: fan '%s' unrecognized, ignoring\n", payload.c_str());
     return;  // unknown fan mode, ignore
   }
+  ac.setFan(fan);
   currentFan = payload;
   Serial.printf("IR: sending fan=%s\n", payload.c_str());
   ac.send();
