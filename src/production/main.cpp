@@ -114,8 +114,11 @@ void publishDiscovery() {
 
   char buffer[1536];
   size_t n = serializeJson(doc, buffer);
-  if (!mqttClient.publish(kDiscoveryTopic, (uint8_t *)buffer, n, true)) {
-    Serial.printf("MQTT: discovery publish failed (%d bytes)\n", n);
+  if (mqttClient.publish(kDiscoveryTopic, (uint8_t *)buffer, n, true)) {
+    Serial.printf("MQTT: discovery published (%d bytes)\n", n);
+  } else {
+    Serial.printf("MQTT: discovery publish failed (%d bytes, buffer=%d)\n", n,
+                  mqttClient.getBufferSize());
   }
 }
 
