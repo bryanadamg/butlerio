@@ -2,11 +2,13 @@ services:
   homeassistant:
     image: ghcr.io/home-assistant/home-assistant:stable
     container_name: homeassistant
+    ports:
+      - "8123:8123"
     volumes:
       - ./homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
-    network_mode: host
+    # network_mode: host
 
   mosquitto:
     image: eclipse-mosquitto:2
@@ -18,3 +20,13 @@ services:
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
     restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: home-cloudflared
+    restart: always
+    command: tunnel run
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    depends_on:
+      - homeassistant

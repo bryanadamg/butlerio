@@ -9,3 +9,5 @@ deploy/mosquitto/config/passwd
 deploy/mosquitto/data/
 deploy/mosquitto/log/
 deploy/homeassistant/
+
+cloudflared/
