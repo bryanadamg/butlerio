@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <esp_bt.h>
 #include <ir_Toshiba.h>
 
 #include "secrets.h"
@@ -317,17 +318,25 @@ void connectMqtt() {
 }
 
 void setup() {
+  // Thermal: 240MHz buys nothing here — MQTT + IR are idle-dominated. 80MHz is
+  // the floor for WiFi (APB must stay >= 80MHz). Must precede Serial.begin() or
+  // the UART divisor is computed against the old clock and output garbles.
+  setCpuFrequencyMhz(80);
+  btStop();  // BT radio never used
+
   Serial.begin(115200);
   Serial.println("production: booting");
   ac.begin();
   mqttClient.setBufferSize(1536);
 
+#ifdef WIFI_DEBUG_SCAN
   Serial.println("WiFi: scanning...");
   int n = WiFi.scanNetworks();
   for (int i = 0; i < n; i++) {
     Serial.printf("  [%d] %s (rssi=%d)\n", i, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
   }
   WiFi.scanDelete();
+#endif
 
   connectWiFi();
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
@@ -355,4 +364,8 @@ void loop() {
     connectMqtt();
     mqttClient.loop();
   }
+  // Yields to the idle task so the CPU parks between polls. 50ms is
+  // imperceptible for AC control and still drains a burst of retained command
+  // topics quickly (PubSubClient handles one packet per loop() call).
+  delay(50);
 }
