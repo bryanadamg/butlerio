@@ -1,31 +1,39 @@
 # deploy
 
-Home Assistant + Mosquitto, as Docker containers alongside your Pi's other services. Run from this directory on the Pi.
+Home Assistant + Mosquitto + Cloudflare tunnel, as Docker containers on the VPS (`tijel-vps`, cloned at `/opt/butlerio`). Run from this directory.
+
+- HA is reached only through the tunnel (`home.tijel.id` → `http://homeassistant:8123`); no port is published.
+- Mosquitto publishes only `8883` (TLS, `mqtt.tijel.id`) for the ESP32. HA talks to it over the compose network on plaintext `mosquitto:1883`.
+- `homeassistant/`, `cloudflared/`, `mosquitto/data/`, `mosquitto/config/passwd` and `mosquitto/config/certs/` are gitignored state — back them up / copy them when moving hosts.
 
 ## First-time setup
 
-1. Generate the Mosquitto password file (gitignored, not committed):
+1. DNS: `mqtt` A record → VPS IP, **DNS only** (Cloudflare's proxy can't carry MQTT).
+
+2. TLS cert (port 80 must be reachable; certbot's timer handles renewal and re-runs the hook):
+
+   ```
+   certbot certonly --standalone -d mqtt.tijel.id --key-type rsa --deploy-hook "$(pwd)/mosquitto-cert-hook.sh"
+   ```
+
+3. Generate the Mosquitto password file:
 
    ```
    docker run --rm -it -v "$(pwd)/mosquitto/config:/mosquitto/config" eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/passwd toshiba_ac
    ```
 
-2. Start both containers:
+4. Start everything:
 
    ```
    docker compose up -d
    ```
 
-3. Onboard Home Assistant at `http://<pi-ip>:8123`, create admin account.
+5. Onboard Home Assistant at `https://home.tijel.id`, then add the broker: Settings -> Devices & Services -> Add Integration -> MQTT -> host `mosquitto`, port `1883`, username `toshiba_ac`, the password from step 3.
 
-4. Add the broker: Settings -> Devices & Services -> Add Integration -> MQTT -> host `localhost`, port `1883`, username `toshiba_ac`, the password from step 1.
-
-5. Fill `../src/production/secrets.h`:
-   - `MQTT_HOST` = Pi's LAN IP
-   - `MQTT_USERNAME` = `toshiba_ac`
-   - `MQTT_PASSWORD` = the password from step 1
+6. Fill `../src/production/secrets.h`: `MQTT_HOST` = `mqtt.tijel.id`, `MQTT_PORT` = `8883`, `MQTT_USERNAME`/`MQTT_PASSWORD` from step 3.
 
 ## Notes
 
-- `homeassistant` runs with `network_mode: host` — needed for mDNS/local discovery. `mosquitto` doesn't need it, port `1883` is published directly.
-- HA here is the **Container** install (no Supervisor) — no add-on store. Mosquitto runs as its own container instead of an HA add-on.
+- HA here is the **Container** install (no Supervisor) — no add-on store.
+- The VPS has ~1GB RAM; HA leans on the 2GB swap file during startup/updates.
+- The firmware trusts ISRG Root X1 and Root YR (`kMqttCaCerts` in `src/production/main.cpp`). Renewals don't need a reflash unless Let's Encrypt moves the cert to a different root.

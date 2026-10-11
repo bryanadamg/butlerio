@@ -6,6 +6,7 @@ CLAUDE.md
 .claude/
 
 deploy/mosquitto/config/passwd
+deploy/mosquitto/config/certs/
 deploy/mosquitto/data/
 deploy/mosquitto/log/
 deploy/homeassistant/
